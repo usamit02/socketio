@@ -37,11 +37,13 @@ io.sockets.on("connection", socket => {
       newRoom[0] = rooms[rooms.length - 1];
     }
     if (data.user) {
-      newRoom[0].addUser(socket.id, data.user);
-      io.sockets.in(data.newRoomId).emit("join", newRoom[0].users);
-      users[socket.id] = data.user;
-      roomId[socket.id] = data.roomId;
-    } else {
+      if (roomId[socket.id] !== data.newRoomId) {
+        newRoom[0].addUser(socket.id, data.user);
+        io.sockets.in(data.newRoomId).emit("join", newRoom[0].users);
+        users[socket.id] = data.user;
+        roomId[socket.id] = data.newRoomId;
+      }
+    } else {//ログインしていないメンバーの処理
       io.to(socket.id).emit("join", newRoom[0].users);
     }
   });
@@ -52,6 +54,7 @@ io.sockets.on("connection", socket => {
     if (oldRoom.length) {
       oldRoom[0].delUser(socket.id);
       socket.broadcast.to(data.oldRoomId).emit("join", oldRoom[0].users);
+      roomId[socket.id] = "";
     }
   });
   socket.on("logout", (data) => {
@@ -66,7 +69,7 @@ io.sockets.on("connection", socket => {
     // if (users[socket.id]) {
     let room = rooms.filter(r => { if (r.id === roomId[socket.id]) return true; });
     if (room.length) {
-      room[0].delUser(socketId);
+      room[0].delUser(socket.id);
       io.sockets.in(roomId[socket.id]).emit("join", room[0].users);
     } else if (rid) {//ログインしていないuserの処理
       room = rooms.filter(r => { if (r.id === rid) return true; });
