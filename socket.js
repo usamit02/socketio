@@ -1,4 +1,9 @@
-var server = require("http").createServer().listen(8080);
+const fs = require('fs');
+const options = {
+  key: fs.readFileSync("/etc/letsencrypt/live/www.clife.cf/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/www.clife.cf/cert.pem")
+};
+var server = require("https").createServer(options).listen(8080);
 var io = require("socket.io").listen(server);
 var users = {};
 var roomId = {};
@@ -25,6 +30,7 @@ class User {
     this.id = user.uid;
     this.name = user.displayName;
     this.join = new Date();
+    this.rtc = false;
   }
 }
 io.sockets.on("connection", socket => {
@@ -42,6 +48,10 @@ io.sockets.on("connection", socket => {
         io.sockets.in(data.newRoomId).emit("join", newRoom[0].users);
         users[socket.id] = data.user;
         roomId[socket.id] = data.newRoomId;
+      } else if (data.rtc === false) {
+        rtc(false);
+      } else {
+        console.error("rtc fault");
       }
     } else {//ログインしていないメンバーの処理
       io.to(socket.id).emit("join", newRoom[0].users);
@@ -82,5 +92,20 @@ io.sockets.on("connection", socket => {
     // } else {
     //   console.error("there is no user to log out")
     // }
+  }
+  socket.on("rtc", data => {
+    rtc(data);
+  })
+  function rtc(data) {
+    if (users[socket.id] && roomId[socket.id]) {
+      let room = rooms.filter(r => { if (r.id === roomId[socket.id]) return true; });
+      if (room.length) {
+        let user = room[0].users.filter(u => { if (u.socketId === socket.id) return true; });
+        if (user) {
+          user[0].rtc = data;
+          io.sockets.in(roomId[socket.id]).emit("join", room[0].users);
+        }
+      }
+    }
   }
 });
