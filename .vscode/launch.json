@@ -8,7 +8,7 @@
       "type": "node",
       "request": "launch",
       "name": "プログラムの起動",
-      "program": "${workspaceFolder}/ionic.js"
+      "program": "${workspaceFolder}/socket_local.js"
     }
   ]
 }
