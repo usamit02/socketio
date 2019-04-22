@@ -23,26 +23,26 @@ class User {
   constructor(socketId, user) {
     this.socketId = socketId;
     this.id = user.id;
-    this.na = user.na;
-    this.avatar = user.avatar
+    this.name = user.name;
+    this.avatorUrl = user.avatorUrl
     this.join = new Date();
     this.rtc = "";
   }
 }
 io.sockets.on("connection", socket => {
   socket.on("join", data => {
-    let newRoom = rooms.filter(room => room.id === data.newRoomId);
-    if (!newRoom.length) {
-      rooms[rooms.length] = new Room(data.newRoomId);
-      newRoom[0] = rooms[rooms.length - 1];
-    }
-    if (data.user.id) {
+    if (data.user) {
       if (roomId[socket.id] !== data.newRoomId) {
         socket.leave(data.oldRoomId);
         socket.join(data.newRoomId);
+        let newRoom = rooms.filter(r => { if (r.id === data.newRoomId) return true; });
+        if (!newRoom.length) {
+          rooms[rooms.length] = new Room(data.newRoomId);
+          newRoom[0] = rooms[rooms.length - 1];
+        }
         newRoom[0].addUser(socket.id, data.user);
         io.sockets.in(data.newRoomId).emit("join", newRoom[0].users);
-        let oldRoom = rooms.filter(room => room.id === data.oldRoomId);
+        let oldRoom = rooms.filter(r => { if (r.id === data.oldRoomId) return true; });
         if (oldRoom.length) {
           oldRoom[0].delUser(socket.id);
           socket.broadcast.to(data.oldRoomId).emit("join", oldRoom[0].users);
@@ -88,27 +88,30 @@ io.sockets.on("connection", socket => {
   });
   function logout(rid) {
     // if (users[socket.id]) {
-    let room = rooms.filter(room => room.id === roomId[socket.id]);
+    let room = rooms.filter(r => { if (r.id === roomId[socket.id]) return true; });
     if (room.length) {
       room[0].delUser(socket.id);
       io.sockets.in(roomId[socket.id]).emit("join", room[0].users);
     } else if (rid) {//ログインしていないuserの処理
-      room = rooms.filter(room => room.id === rid);
+      room = rooms.filter(r => { if (r.id === rid) return true; });
       if (room.length) {
         io.to(socket.id).emit("join", room[0].users);
       }
     }
     delete users[socket.id];
     delete roomId[socket.id];
+    // } else {
+    //   console.error("there is no user to log out")
+    // }
   }
   socket.on("rtc", data => {
     rtc(data);
   })
   function rtc(data) {
     if (users[socket.id] && roomId[socket.id]) {
-      let room = rooms.filter(room => room.id === roomId[socket.id]);
+      let room = rooms.filter(r => { if (r.id === roomId[socket.id]) return true; });
       if (room.length) {
-        let user = room[0].users.filter(user => user.socketId === socket.id);
+        let user = room[0].users.filter(u => { if (u.socketId === socket.id) return true; });
         if (user.length) {
           user[0].rtc = data;
           io.sockets.in(roomId[socket.id]).emit("join", room[0].users);
