@@ -60,6 +60,10 @@ io.sockets.on("connection", socket => {
         }
       }
       roomId[socket.id] = data.newRoomId;
+      checks = users.filter(user => { return user.socketId === socket.id; });//ログイン時ユーザー追加に失敗することがあるので対策
+      if (!checks.length) {
+        users.push(new User(socket.id, data.user));
+      }
     } else {//ログイン時
       newRoom[0].delUser(socket.id);
       newRoom[0].addUser(socket.id, data.user);
@@ -156,6 +160,12 @@ io.sockets.on("connection", socket => {
     let getter = users.filter(user => { return user.id === data.mid; });
     if (getter.length) {
       io.to(getter[0].socketId).emit("give", data);
+    }
+  });
+  socket.on("ban", id => {//短文付き投げ銭
+    let bans = users.filter(user => { return user.id === id; });
+    if (bans.length) {
+      io.to(bans[0].socketId).emit("ban", id);
     }
   });
 });
